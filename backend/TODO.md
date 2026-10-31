@@ -9,7 +9,7 @@
 - [ ] Lancer `npm run test:mentor-api` avec un compte Mentor actif pour tester les routes en lecture seule sur les données réelles.
 - [x] Reproduire le cockpit Mentor responsive et relier ses sections aux routes de l’API.
 - [x] Connecter la connexion frontend à Supabase et transmettre la session à l’API Mentor.
-- [ ] Lancer les vérifications frontend/API avec un compte Mentor actif et des données réelles.
+- [x] Lancer les vérifications frontend/API avec un compte Mentor actif et des données réelles.
 - [ ] Vérifier l’activation de Supabase Realtime sur la table `messages`.
 - [ ] (Facultatif) Configurer Google Calendar et vérifier la création du lien Meet.
 
