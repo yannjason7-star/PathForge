@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PathForge — frontend Mentor
 
-## Getting Started
+## Configuration locale
 
-First, run the development server:
+Le frontend charge les variables d’environnement depuis `frontend/.env.local`.
+Copie `.env.example` vers ce fichier et renseigne les valeurs du projet Supabase.
+La clé à utiliser côté navigateur est uniquement la clé publique `anon` ; ne mets
+jamais la clé `service_role` dans le frontend.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
+NEXT_PUBLIC_MENTOR_API_URL=http://localhost:4000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Le dépôt PathForge peut déjà contenir ces deux variables Supabase dans son
+`.env.local` racine. Next.js ne charge pas automatiquement ce fichier depuis le
+dossier `frontend` : recopie les deux valeurs dans `frontend/.env.local`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Démarrer l’application
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Dans un terminal à la racine `frontend` :
 
-## Learn More
+```powershell
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Dans un autre terminal, démarre également l’API depuis `backend` avec
+`npm run dev`. Ouvre ensuite `http://localhost:3000`. La racine redirige vers
+la connexion Mentor.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Connecte-toi avec le compte Mentor Supabase. L’API vérifie que le profil a le
+rôle `mentor` et le statut `active`. Le frontend transmet le jeton Supabase de la
+session dans l’en-tête `Authorization: Bearer ...` ; aucun mot de passe ni jeton
+n’est enregistré dans le code.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Sections du cockpit
 
-## Deploy on Vercel
+- **Vue d’ensemble** : indicateurs réels, prochains rendez-vous, progression,
+  livrables et notifications.
+- **Mes incubés** : projets attribués et progression des formations.
+- **Évaluations** : téléchargement signé des livrables et envoi de feedback.
+- **Agenda & visios** : demandes de rendez-vous, décisions, liens Meet et
+  gestion des disponibilités récurrentes.
+- **Ressources** : bibliothèque des documents déposés par les incubés.
+- **Messages** : conversations et envoi de messages aux incubés assignés.
+- **Notifications** : lecture des alertes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Les volumes mensuels de coaching, notes moyennes et tâches personnelles visibles
+sur la maquette ne sont pas encore exposés par le modèle/API Mentor ; ils ne sont
+donc pas présentés comme des données réelles dans le cockpit.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Vérification
+
+```powershell
+npm run lint
+npx tsc --noEmit
+npm run build
+```
