@@ -6,10 +6,10 @@
 - [ X] 1.3 Gérer l'Écran 1 : Affichage de la page "Votre compte est en cours d'analyse" (si le statut du profil est 'pending').
 
 ## TITRE 2 : TABLEAU DE BORD / ACCUEIL (Écran 2)
-- [ ] 2.1 Afficher un message de bienvenue personnalisé (ex: "Bonjour [Prénom]").
-- [ ] 2.2 Créer la barre de progression globale des formations (%).
-- [ ] 2.3 Afficher la prochaine étape à réaliser (ex: "Livrable X en attente").
-- [ ] 2.4 Afficher la carte du prochain RDV avec le Mentor (s'il y en a un).
+- [X ] 2.1 Afficher un message de bienvenue personnalisé (ex: "Bonjour [Prénom]").
+- [ X] 2.2 Créer la barre de progression globale des formations (%).
+- [ X] 2.3 Afficher la prochaine étape à réaliser (ex: "Livrable X en attente").
+- [ X] 2.4 Afficher la carte du prochain RDV avec le Mentor (s'il y en a un).
 
 ## TITRE 3 : ESPACE FORMATIONS (Écran 3)
 - [ ] 3.1 Créer l'interface listant les modules sous forme de cartes (Titre, Image, Type : Vidéo/PDF).
