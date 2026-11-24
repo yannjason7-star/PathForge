@@ -1,0 +1,26 @@
+.login-page{min-height:100vh;display:grid;grid-template-columns:minmax(420px,1fr) minmax(420px,1fr);background:#fff;color:#132134;font-family:Arial,Helvetica,sans-serif}
+.login-card{width:min(430px,calc(100% - 48px));margin:auto;padding:64px 0}
+.login-brand{display:flex;align-items:center;gap:12px;color:#102334;text-decoration:none}
+.login-brand strong{display:block;font-size:19px;letter-spacing:-.04em}
+.login-brand small{display:block;margin-top:3px;color:#708090;font-size:9px;letter-spacing:.13em}
+.brand-mark{display:grid;place-items:center;width:39px;height:39px;border-radius:13px;background:#087f71;color:#fff;font-size:13px;font-weight:800;letter-spacing:-.08em}
+.login-intro{margin:64px 0 34px}
+.login-kicker{display:inline-block;color:#087f71;font-size:10px;font-weight:800;letter-spacing:.15em}
+.login-intro h1{margin:14px 0 10px;font-size:36px;letter-spacing:-.055em}
+.login-intro p,.login-aside-content p{margin:0;color:#6b7988;font-size:14px;line-height:1.7}
+.login-form{display:grid;gap:10px}
+.login-form label{margin-top:8px;color:#25364a;font-size:12px;font-weight:700}
+.login-form input{height:48px;border:1px solid #dfe6ed;border-radius:11px;padding:0 14px;color:#132134;font:inherit;outline:none}
+.login-form input:focus{border-color:#0c8d7f;box-shadow:0 0 0 3px #0c8d7f1a}
+.login-submit{height:49px;margin-top:14px;border:0;border-radius:11px;background:#087f71;color:white;font:inherit;font-weight:700;cursor:pointer}
+.login-submit:disabled{opacity:.62;cursor:wait}
+.login-error{margin:3px 0 0;padding:11px 12px;border-radius:9px;background:#fff0ef;color:#a9362e;font-size:12px;line-height:1.5}
+.login-note{margin-top:22px;color:#788595;font-size:11px;text-align:center}
+.login-aside{display:flex;flex-direction:column;justify-content:space-between;min-height:100vh;padding:54px clamp(36px,8vw,120px);background:radial-gradient(circle at 75% 16%,#174b54 0,transparent 34%),linear-gradient(145deg,#071d2b,#092f3b 60%,#087e71);color:white}
+.login-aside-content{max-width:440px;margin:auto 0}
+.login-orbit{display:grid;place-items:center;width:106px;height:106px;margin-bottom:48px;border:1px solid #ffffff3d;border-radius:34px;background:#ffffff0d;color:#81f1dc;font-size:29px;font-weight:800;box-shadow:0 20px 70px #0003}
+.login-aside-content h2{max-width:390px;margin:17px 0;font-size:clamp(34px,4vw,54px);line-height:1.08;letter-spacing:-.055em}
+.login-aside-content p{max-width:360px;color:#c3d6d9}
+.login-aside-footer{color:#c3d6d9;font-size:11px}
+@media(max-width:850px){.login-page{grid-template-columns:1fr}.login-card{padding:42px 0}.login-intro{margin-top:48px}.login-aside{min-height:330px;padding:38px 28px}.login-orbit{width:62px;height:62px;margin-bottom:25px;border-radius:21px;font-size:20px}.login-aside-content h2{font-size:35px}}
+@media(max-width:480px){.login-card{width:calc(100% - 36px)}.login-intro h1{font-size:31px}}

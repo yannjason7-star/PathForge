@@ -1,0 +1,64 @@
+.role-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #182230;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.role-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; }
+.role-sidebar { background: #10243e; color: white; padding: 28px 20px; display:flex; flex-direction:column; }
+.role-brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:20px; }
+.role-brand span { width:38px;height:38px;border-radius:10px;background:#24baa7;display:grid;place-items:center; }
+.role-sidebar nav { display:grid; gap:8px; margin-top:36px; }
+.role-sidebar nav span { padding:12px 14px;border-radius:8px;background:#183553;color:#dfe8f3; }
+.role-logout { margin-top:auto;border:0;border-radius:8px;padding:12px;background:#20415f;color:white;cursor:pointer; }
+.role-main { min-width:0; }
+.role-header { height:72px;display:flex;align-items:center;justify-content:flex-end;padding:0 32px;background:white;border-bottom:1px solid #e4e8ef; }
+.role-header button { border:0;border-radius:50%;width:40px;height:40px;background:#24baa7;color:white;font-weight:bold;cursor:pointer; }
+.role-content { max-width:1180px;margin:auto;padding:32px; }
+.role-heading { display:flex;justify-content:space-between;align-items:center;margin-bottom:24px; }
+.role-heading h1 { margin:4px 0 8px;font-size:32px; }
+.role-heading p { margin:0;color:#718096; }
+.role-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:20px; }
+.role-card,.role-panel { background:white;border:1px solid #e6eaf0;border-radius:14px;box-shadow:0 8px 24px rgba(24,34,48,.05); }
+.role-card { padding:20px; }
+.role-card strong { display:block;font-size:30px;margin-bottom:6px;color:#10243e; }
+.role-card span { color:#718096; }
+.role-panel { padding:20px;margin-bottom:20px; }
+.role-panel h2 { margin:0 0 16px;font-size:18px; }
+.role-table { width:100%;border-collapse:collapse; }
+.role-table th,.role-table td { text-align:left;padding:12px;border-bottom:1px solid #edf0f4; }
+.role-table th { color:#718096;font-size:13px; }
+.role-actions { display:flex;gap:8px; }
+.role-button { border:0;border-radius:8px;padding:9px 12px;background:#24baa7;color:white;cursor:pointer;font-weight:700; }
+.role-button.secondary { background:#edf3f8;color:#24364a; }
+.role-button.danger { background:#fff0f0;color:#b42318; }
+.role-button:disabled { opacity:.55;cursor:not-allowed; }
+.role-input,.role-select,.role-textarea { width:100%;box-sizing:border-box;border:1px solid #d8dee8;border-radius:8px;padding:10px;background:white;color:#182230; }
+.role-textarea { min-height:90px;resize:vertical; }
+.role-form { display:grid;gap:12px; }
+.role-list { list-style:none;margin:0;padding:0;display:grid;gap:10px; }
+.role-list li { display:flex;justify-content:space-between;align-items:center;border:1px solid #edf0f4;border-radius:10px;padding:12px;gap:12px; }
+.role-status { border-radius:999px;padding:5px 9px;background:#eef7f5;color:#147d70;font-size:12px;font-weight:700; }
+.role-status.pending { background:#fff6e6;color:#9a6700; }
+.role-status.cancelled,.role-slot-booked { background:#eef1f4;color:#77808b; }
+.role-slot-booked { opacity:.72; }
+.role-error { background:#fff0f0;border:1px solid #ffd1d1;color:#9f1c1c;padding:12px;border-radius:8px;margin-bottom:16px; }
+.role-notice { background:#eaf8f5;border:1px solid #bce8df;color:#147d70;padding:12px;border-radius:8px;margin-bottom:16px; }
+.role-progress { height:8px;border-radius:999px;background:#edf1f5;overflow:hidden;margin:8px 0; }
+.role-progress span { height:100%;display:block;background:#24baa7; }
+.role-chat { display:grid;gap:8px;max-height:300px;overflow:auto;padding:4px; }
+.role-message { max-width:75%;padding:10px 12px;border-radius:10px;background:#eef3f8; }
+.role-message.sent { margin-left:auto;background:#daf4ef; }
+.role-loading { min-height:100vh;display:grid;place-items:center;background:#f5f7fb; }
+
+@media(max-width:900px){
+  .role-shell{grid-template-columns:1fr;}
+  .role-sidebar{position:sticky;top:0;z-index:10;padding:12px 16px;}
+  .role-sidebar nav{display:none;}
+  .role-logout{margin:0;align-self:flex-end;}
+  .role-content{padding:20px 16px;}
+  .role-grid{grid-template-columns:1fr;}
+  .role-heading{align-items:flex-start;gap:12px;}
+  .role-table{display:block;overflow-x:auto;}
+}
