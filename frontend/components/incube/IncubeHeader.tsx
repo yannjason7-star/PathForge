@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Plus, UploadCloud, X, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-export default function IncubeHeader({ firstName, createdAt, projectId }: { firstName: string, createdAt: string, projectId: string | null }) {
+type NotificationItem = { id: string; title: string; body: string; read_at: string | null; created_at: string; kind?: string };
+
+export default function IncubeHeader({ 
+  firstName, 
+  createdAt, 
+  projectId,
+  userId 
+}: { 
+  firstName: string; 
+  createdAt: string; 
+  projectId: string | null;
+  userId?: string;
+}) {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -20,6 +34,46 @@ export default function IncubeHeader({ firstName, createdAt, projectId }: { firs
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // Récupération et écoute en temps réel des notifications
+  useEffect(() => {
+    if (!userId) return;
+
+    // Chargement initial
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        if (data) setNotifications(data);
+      });
+
+    // Écoute des nouvelles alertes en direct
+    const channel = supabase
+      .channel("header-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          setNotifications((prev) => [payload.new as NotificationItem, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  const markAllAsRead = async () => {
+    if (!userId) return;
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: now })));
+    await supabase.from("notifications").update({ read_at: now }).eq("user_id", userId).is("read_at", null);
+  };
 
   const handleUpload = async () => {
     if (!file || !projectId) return;
@@ -63,9 +117,57 @@ export default function IncubeHeader({ firstName, createdAt, projectId }: { firs
             <Plus size={16} /><span>Nouveau Livrable</span>
           </button>
 
-          <button className="relative text-[#758396] hover:text-[#081e2c] transition-colors p-2 rounded-full hover:bg-[#f4f6fb]">
-            <Bell size={18} />
-          </button>
+         {/* Cloche avec Centre d'Alertes Déroulant */}
+          <div className="relative">
+            <button 
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className="relative text-[#758396] hover:text-[#081e2c] transition-colors p-2 rounded-full hover:bg-[#f4f6fb]"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+              )}
+            </button>
+
+            {isNotifOpen && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-[#e7edf3] overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-4 border-b border-[#e7edf3] bg-[#f4f6fb] flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#081e2c] uppercase tracking-wider">
+                    Notifications {unreadCount > 0 && `(${unreadCount})`}
+                  </span>
+                  {unreadCount > 0 && (
+                    <button 
+                      onClick={markAllAsRead}
+                      className="text-[10px] font-bold text-[#087f71] hover:underline"
+                    >
+                      Tout marquer lu
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-[#e7edf3]">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[#758396]">
+                      Aucune notification pour le moment.
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+              <div 
+                        key={notif.id} 
+                        className={`p-3.5 hover:bg-[#f4f6fb] transition-colors ${!notif.read_at ? 'bg-emerald-50/40' : ''}`}
+                      >
+                        <p className="text-xs font-bold text-[#081e2c]">{notif.title}</p>
+                        <p className="text-[11px] text-[#758396] mt-0.5 leading-relaxed">{notif.body}</p>
+                        <span className="text-[9px] text-[#758396] font-medium mt-1 block">
+                          {new Date(notif.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-3 ml-2 border-l border-[#e7edf3] pl-4">
             <div className="text-right hidden md:block">

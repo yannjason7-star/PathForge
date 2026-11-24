@@ -42,7 +42,7 @@ export default async function IncubeLayout({
         <IncubeSidebar />
       </div>
       <div className="flex-1 flex flex-col min-w-0">
-        <IncubeHeader firstName={firstName} createdAt={createdAt} projectId={projectId} />
+       <IncubeHeader firstName={firstName} createdAt={createdAt} projectId={projectId} userId={currentUserId} />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="max-w-6xl mx-auto">
             {children}

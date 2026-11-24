@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, FolderKanban, Calendar, MessageSquare, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, FolderKanban, Calendar, MessageSquare, Bell, LogOut } from "lucide-react";
 
 const navLinks = [
   { name: "Vue d'ensemble", href: "/incube", icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navLinks = [
   { name: "Mon Projet", href: "/incube/projet", icon: FolderKanban },
   { name: "Mentorat", href: "/incube/mentorat", icon: Calendar },
   { name: "Messagerie", href: "/incube/messagerie", icon: MessageSquare },
+  { name: "Notifications", href: "/incube/notifications", icon: Bell },
 ];
 
 export default function IncubeSidebar() {

@@ -13,7 +13,7 @@ export default async function IncubeDashboard() {
 
   const { data: profile } = await supabase.from("profiles").select("first_name").eq("id", currentUserId).single();
   const { data: project } = await supabase.from("projects").select("id, title, status").eq("incube_id", currentUserId).single();
-  const { data: appointments } = await supabase.from("appointments").select("*").eq("incube_id", currentUserId).gte("date_time", now).order("date_time", { ascending: true }).limit(1);
+  const { data: appointments } = await supabase.from("appointments").select("*").eq("incube_id", currentUserId).in("status", ["confirme", "accepted"]).gte("date_time", now).order("date_time", { ascending: true }).limit(1);
   const { data: tasks } = await supabase.from("tasks").select("*").eq("incube_id", currentUserId).order("created_at", { ascending: true });
   
   const { count: totalFormations } = await supabase.from("formations").select("*", { count: 'exact', head: true });
