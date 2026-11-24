@@ -28,8 +28,8 @@ export type Appointment = {
   id: string;
   incube_id: string;
   date_time: string;
-  status: "pending" | "accepted" | "rejected" | string;
-  meeting_url?: string | null;
+  status: "pending" | "accepted" | "rejected" | "cancelled" | string;
+  incube_message?: string | null;
 };
 
 export type Availability = {

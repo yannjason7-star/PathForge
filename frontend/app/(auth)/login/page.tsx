@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { mentorApi } from "@/lib/mentor-api";
 import "./login.css";
 
 export default function LoginPage() {
@@ -25,14 +24,23 @@ export default function LoginPage() {
       });
       if (loginError) throw loginError;
       if (!data.session) throw new Error("Supabase n’a pas renvoyé de session.");
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role,status")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile) throw new Error("Profil utilisateur introuvable.");
+      if (profile.status !== "active") throw new Error("Ce compte n’est pas encore actif.");
 
-      try {
-        await mentorApi("/dashboard", data.session.access_token);
-      } catch (accessError) {
-        await supabase.auth.signOut();
-        throw accessError;
-      }
-      router.replace("/mentor");
+      const destinations: Record<string, string> = {
+        mentor: "/mentor",
+        incube: "/incube",
+        entreprise: "/entreprise",
+        admin: "/admin",
+      };
+      if (!destinations[profile.role]) throw new Error("Rôle utilisateur non pris en charge.");
+      router.replace(destinations[profile.role]);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "La connexion a échoué.");
     } finally {

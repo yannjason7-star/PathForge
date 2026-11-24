@@ -10,14 +10,16 @@
 - [x] Reproduire le cockpit Mentor responsive et relier ses sections aux routes de l’API.
 - [x] Connecter la connexion frontend à Supabase et transmettre la session à l’API Mentor.
 - [x] Lancer les vérifications frontend/API avec un compte Mentor actif et des données réelles.
-- [ ] Vérifier l’activation de Supabase Realtime sur la table `messages`.
-- [ ] (Facultatif) Configurer Google Calendar et vérifier la création du lien Meet.
+- [x] Vérifier l’activation de Supabase Realtime sur la table `messages`.
+- [x] Gérer les rendez-vous depuis l’interface Mentor.
+- [x] Ajouter le dépôt de formations (livres, vidéos ou documents).
 
 ## Reste du MVP
 
-- [ ] Finaliser et intégrer les parcours Incubé, Entreprise et Admin.
-- [ ] Vérifier les permissions et les parcours complets de chaque rôle.
+- [x] Finaliser et intégrer les parcours Incubé, Entreprise et Admin.
+- [x] Vérifier les permissions et les parcours complets de chaque rôle.
 - [ ] Effectuer les validations de bout en bout et préparer le déploiement.
+- [x] Ajouter une table d’audit, des index, des vues et des triggers de traçabilité pour les données sensibles.
 
 ## Démarrer le backend
 

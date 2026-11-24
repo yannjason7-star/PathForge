@@ -18,12 +18,13 @@ import "./mentor.css";
 
 type Section = "cockpit" | "incubes" | "evaluations" | "agenda" | "resources" | "messages" | "notifications";
 type DeliverableWithContext = Deliverable & { incubeId: string; incubeName: string; projectTitle: string };
+type Formation = { id: string; title: string; description: string | null; resource_type: "book" | "video" | "document"; resource_url: string | null; created_at: string };
 
 const sections: { id: Section; label: string; icon: string }[] = [
   { id: "cockpit", label: "Vue d’ensemble", icon: "⌂" },
   { id: "incubes", label: "Mes incubés", icon: "♧" },
   { id: "evaluations", label: "Évaluations", icon: "▣" },
-  { id: "agenda", label: "Agenda & visios", icon: "▦" },
+  { id: "agenda", label: "Agenda & rendez-vous", icon: "▦" },
   { id: "resources", label: "Ressources", icon: "▤" },
   { id: "messages", label: "Messages", icon: "✉" },
   { id: "notifications", label: "Notifications", icon: "♢" },
@@ -40,6 +41,9 @@ export default function MentorDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [deliverables, setDeliverables] = useState<DeliverableWithContext[]>([]);
+  const [formations, setFormations] = useState<Formation[]>([]);
+  const [formationForm, setFormationForm] = useState({ title: "", description: "", resourceType: "document" as "book" | "video" | "document" });
+  const [formationFile, setFormationFile] = useState<File | null>(null);
   const [selectedMentee, setSelectedMentee] = useState("");
   const [messages, setMessages] = useState<MentorMessage[]>([]);
   const [messageText, setMessageText] = useState("");
@@ -63,6 +67,14 @@ export default function MentorDashboard() {
     setAppointments(appointmentResult.rendezVous);
     setAvailability(availabilityResult.disponibilités);
     setSelectedMentee((current) => current || menteeResult.incubés[0]?.id || "");
+
+    const { data: formationData, error: formationError } = await supabase
+      .from("formations")
+      .select("id,title,description,resource_type,resource_url,created_at")
+      .eq("created_by", dashboardResult.mentor.id)
+      .order("created_at", { ascending: false });
+    if (formationError) throw formationError;
+    setFormations(formationData || []);
 
     const details = await Promise.all(
       menteeResult.incubés.map((mentee) =>
@@ -113,25 +125,71 @@ export default function MentorDashboard() {
       .then(({ messages: data }) => {
         if (!active) return;
         setMessages(data);
-      const unread = data.filter((message) => message.receiver_id === dashboard?.mentor.id && !message.read_at);
-      Promise.all(unread.map((message) =>
-        mentorApi(`/messages/${message.id}/read`, token, { method: "PUT" }),
-      )).then(() => {
-        if (!active || unread.length === 0) return;
-        setMessages((current) => current.map((message) =>
-          unread.some((item) => item.id === message.id)
-            ? { ...message, read_at: new Date().toISOString() }
-            : message,
-        ));
-        setDashboard((current) => current ? ({
-          ...current,
-          stats: { ...current.stats, messagesNonLus: Math.max(0, current.stats.messagesNonLus - unread.length) },
-        }) : current);
-      }).catch((readError: unknown) => { if (active) setError(errorMessage(readError)); });
-    })
+        const unread = data.filter((message) => message.receiver_id === dashboard?.mentor.id && !message.read_at);
+        Promise.all(unread.map((message) =>
+          mentorApi(`/messages/${message.id}/read`, token, { method: "PUT" }),
+        )).then(() => {
+          if (!active || unread.length === 0) return;
+          setMessages((current) => current.map((message) =>
+            unread.some((item) => item.id === message.id)
+              ? { ...message, read_at: new Date().toISOString() }
+              : message,
+          ));
+          setDashboard((current) => current ? ({
+            ...current,
+            stats: { ...current.stats, messagesNonLus: Math.max(0, current.stats.messagesNonLus - unread.length) },
+          }) : current);
+        }).catch((readError: unknown) => { if (active) setError(errorMessage(readError)); });
+      })
       .catch((loadError: unknown) => { if (active) setError(errorMessage(loadError)); });
-    return () => { active = false; };
+
+    const channel = supabase
+      .channel(`mentor-messages-${selectedMentee}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload) => {
+        if (!active) return;
+        const changed = (payload.new || payload.old) as Partial<MentorMessage>;
+        if (
+          (changed.sender_id === selectedMentee && changed.receiver_id === dashboard?.mentor.id)
+          || (changed.sender_id === dashboard?.mentor.id && changed.receiver_id === selectedMentee)
+        ) {
+          void mentorApi<{ messages: MentorMessage[] }>(`/messages/${selectedMentee}`, token)
+            .then(({ messages: data }) => {
+              if (active) setMessages(data);
+            })
+            .catch((loadError: unknown) => { if (active) setError(errorMessage(loadError)); });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
   }, [dashboard?.mentor.id, section, selectedMentee, token]);
+
+  useEffect(() => {
+    if (!token || !dashboard?.mentor.id) return;
+    const channel = supabase
+      .channel(`mentor-notifications-${dashboard.mentor.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, (payload) => {
+        const changed = (payload.new || payload.old) as Partial<Notification & { user_id: string }>;
+        if (changed.user_id !== dashboard.mentor.id) return;
+        void Promise.all([
+          mentorApi<MentorDashboardData>("/dashboard", token),
+          mentorApi<{ rendezVous: Appointment[] }>("/appointments", token),
+        ])
+          .then(([data, appointmentData]) => {
+            setDashboard(data);
+            setAppointments(appointmentData.rendezVous);
+          })
+          .catch((loadError: unknown) => setError(errorMessage(loadError)));
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [dashboard?.mentor.id, token]);
 
   const menteeById = useMemo(() => new Map(mentees.map((mentee) => [mentee.id, mentee])), [mentees]);
   const pendingDeliverables = useMemo(
@@ -139,7 +197,18 @@ export default function MentorDashboard() {
     [deliverables],
   );
   const upcomingAppointments = useMemo(
-    () => appointments.filter((appointment) => appointment.status !== "rejected" && new Date(appointment.date_time) >= new Date()),
+    () => appointments.filter((appointment) =>
+      appointment.status !== "rejected"
+      && appointment.status !== "cancelled"
+      && new Date(appointment.date_time) >= new Date(),
+    ),
+    [appointments],
+  );
+  const reservedAppointments = useMemo(
+    () => appointments.filter((appointment) =>
+      appointment.status === "accepted"
+      && new Date(appointment.date_time) > new Date(),
+    ),
     [appointments],
   );
   const selectedMenteeInfo = menteeById.get(selectedMentee);
@@ -207,7 +276,7 @@ export default function MentorDashboard() {
   async function updateAppointment(appointment: Appointment, status: "accepted" | "rejected") {
     await perform(
       appointment.id,
-      () => mentorApi<{ rendezVous: Appointment; meetingLinkStatus: string }>(
+      () => mentorApi<{ rendezVous: Appointment }>(
         `/appointments/${appointment.id}`,
         token,
         { method: "PATCH", body: JSON.stringify({ status }) },
@@ -218,10 +287,18 @@ export default function MentorDashboard() {
         setAppointments((current) => current.map((item) =>
           item.id === appointment.id ? updated.rendezVous : item,
         ));
-        if (updated.meetingLinkStatus === "not_configured") {
-          setNotice("Rendez-vous accepté. Google Calendar n’est pas encore configuré pour créer le lien Meet.");
-        }
       },
+    );
+  }
+
+  async function cancelAppointment(appointment: Appointment) {
+    await perform(
+      appointment.id,
+      () => mentorApi<{ rendezVous: Appointment }>(`/appointments/${appointment.id}`, token, { method: "DELETE" }),
+      "Rendez-vous annulé. Le créneau est de nouveau disponible.",
+      (result) => setAppointments((current) => current.map((item) =>
+        item.id === appointment.id ? result.rendezVous : item,
+      )),
     );
   }
 
@@ -251,6 +328,75 @@ export default function MentorDashboard() {
       "Créneau supprimé.",
       () => setAvailability((current) => current.filter((entry) => entry.id !== item.id)),
     );
+  }
+
+  async function depositFormation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const title = formationForm.title.trim();
+    if (!title) {
+      setError("Indique le titre de la formation.");
+      return;
+    }
+    if (!formationFile) {
+      setError("Sélectionne un livre, une vidéo ou un document.");
+      return;
+    }
+
+    await perform(
+      "formation",
+      async () => {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const mentorId = sessionData.session?.user.id;
+        if (!mentorId) throw new Error("Session Mentor invalide.");
+
+        const safeName = formationFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const objectPath = `${mentorId}/${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("formations")
+          .upload(objectPath, formationFile, { upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { data, error: insertError } = await supabase
+          .from("formations")
+          .insert({
+            title,
+            description: formationForm.description.trim() || null,
+            resource_type: formationForm.resourceType,
+            resource_url: objectPath,
+            created_by: mentorId,
+          })
+          .select("id,title,description,resource_type,resource_url,created_at")
+          .single();
+        if (insertError) throw insertError;
+        return data as Formation;
+      },
+      "Formation déposée et disponible pour les incubés.",
+      (formation) => {
+        setFormations((current) => [formation, ...current]);
+        setFormationForm({ title: "", description: "", resourceType: "document" });
+        setFormationFile(null);
+      },
+    );
+  }
+
+  async function downloadFormation(formation: Formation) {
+    setBusy(formation.id);
+    setError("");
+    setNotice("");
+    try {
+      if (!formation.resource_url) throw new Error("Cette formation n’a pas de fichier associé.");
+      const { data, error: signedUrlError } = await supabase.storage
+        .from("formations")
+        .createSignedUrl(formation.resource_url, 300);
+      if (signedUrlError) throw signedUrlError;
+      if (!data?.signedUrl) throw new Error("Impossible de générer le lien de téléchargement.");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      setNotice("Document de formation prêt.");
+    } catch (downloadError) {
+      setError(errorMessage(downloadError));
+    } finally {
+      setBusy("");
+    }
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -421,23 +567,48 @@ export default function MentorDashboard() {
           )}
 
           {section === "resources" && (
-            <SectionPage title="Ressources" description="Retrouve les documents déposés par les incubés qui te sont assignés." count={`${deliverables.length} document(s)`}>
-              {deliverables.length ? <ResourceList deliverables={deliverables} busy={busy} onDownload={downloadDeliverable} /> : <EmptyState title="Aucune ressource disponible" detail="Les documents déposés par tes incubés apparaîtront ici." />}
+            <SectionPage title="Ressources" description="Dépose des formations et retrouve les documents transmis par tes incubés." count={`${formations.length + deliverables.length} ressource(s)`}>
+              <div className="formation-layout">
+                <section className="panel formation-form-panel">
+                  <div className="panel-heading"><div><h2>Ajouter une formation</h2><p className="panel-subtitle">Livre, vidéo ou document pédagogique</p></div></div>
+                  <form className="formation-form" onSubmit={(event) => void depositFormation(event)}>
+                    <label>Titre<input value={formationForm.title} onChange={(event) => setFormationForm((current) => ({ ...current, title: event.target.value }))} maxLength={200} placeholder="Ex. Guide du pitch deck" required /></label>
+                    <label>Type<select value={formationForm.resourceType} onChange={(event) => setFormationForm((current) => ({ ...current, resourceType: event.target.value as "book" | "video" | "document" }))}><option value="document">Document</option><option value="book">Livre</option><option value="video">Vidéo</option></select></label>
+                    <label>Description<textarea value={formationForm.description} onChange={(event) => setFormationForm((current) => ({ ...current, description: event.target.value }))} maxLength={1000} placeholder="Objectif de la formation…" /></label>
+                    <label>Fichier<input type="file" accept=".pdf,.epub,.doc,.docx,.ppt,.pptx,.mp4,.mov,.webm" onChange={(event) => setFormationFile(event.target.files?.[0] || null)} required /></label>
+                    <button className="primary-button full-button" disabled={busy === "formation"}>{busy === "formation" ? "Dépôt…" : "＋ Déposer la formation"}</button>
+                  </form>
+                </section>
+                <section className="panel formation-library-panel">
+                  <div className="panel-heading"><div><h2>Mes ressources</h2><p className="panel-subtitle">Vidéos, livres et documents déposés pour tes incubés</p></div></div>
+                  {formations.length ? <FormationList formations={formations} busy={busy} onDownload={downloadFormation} /> : <p className="empty-copy">Aucune formation déposée.</p>}
+                </section>
+              </div>
+              {deliverables.length ? <section className="panel incubed-resource-panel"><div className="panel-heading"><div><h2>Documents des incubés</h2><p className="panel-subtitle">Livrables reçus dans tes projets</p></div></div><ResourceList deliverables={deliverables} busy={busy} onDownload={downloadDeliverable} /></section> : null}
             </SectionPage>
           )}
 
           {section === "agenda" && (
-            <SectionPage title="Agenda & visios" description="Traite les demandes de rendez-vous et définis tes créneaux de disponibilité." count={`${appointments.filter((item) => item.status === "pending").length} demande(s) en attente`}>
+            <SectionPage title="Agenda & rendez-vous" description="Traite les demandes de rendez-vous et définis tes créneaux de disponibilité." count={`${appointments.filter((item) => item.status === "pending").length} demande(s) en attente`}>
               <div className="agenda-layout">
                 <section className="panel"><div className="panel-heading"><div><h2>Rendez-vous</h2><p className="panel-subtitle">Demandes et sessions à venir</p></div></div>
-                  <AppointmentList appointments={appointments} menteeById={menteeById} busy={busy} onAccept={(item) => void updateAppointment(item, "accepted")} onReject={(item) => void updateAppointment(item, "rejected")} detailed />
+                  <AppointmentList appointments={appointments} menteeById={menteeById} busy={busy} onAccept={(item) => void updateAppointment(item, "accepted")} onReject={(item) => void updateAppointment(item, "rejected")} onCancel={(item) => void cancelAppointment(item)} detailed />
                 </section>
                 <section className="panel availability-panel"><div className="panel-heading"><div><h2>Mes disponibilités</h2><p className="panel-subtitle">Créneaux récurrents proposés</p></div></div>
                   {availability.length ? <ul className="availability-list">{availability.map((item) => <li key={item.id}><span className="availability-day">{weekdays[item.day_of_week]}</span><span>{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}<small>{item.time_zone}</small></span><button className="icon-button danger-text" aria-label="Supprimer le créneau" disabled={busy === item.id} onClick={() => void removeAvailability(item)}>×</button></li>)}</ul> : <p className="empty-copy">Tu n’as pas encore ajouté de créneaux.</p>}
+                  <div className="reserved-slots">
+                    <h3>Créneaux réservés</h3>
+                    {reservedAppointments.length ? <ul className="availability-list">{reservedAppointments.map((appointment) => {
+                      const isPending = appointment.status === "pending";
+                      const timeZone = availability.find((item) => matchesAvailability(appointment.date_time, item))?.time_zone || "Europe/Paris";
+                      return <li key={appointment.id}><span className="availability-day">{formatInTimeZone(appointment.date_time, timeZone)}</span><span>{menteeName(menteeById, appointment.incube_id)}<small>{isPending ? "En attente de ta réponse" : "Confirmé"}{appointment.incube_message ? " · Proposition de l’incubé" : " · Créneau choisi"}</small></span>{isPending && <div className="appointment-actions"><button className="accept-button" disabled={busy === appointment.id} onClick={() => void updateAppointment(appointment, "accepted")}>Accepter</button><button className="reject-button" disabled={busy === appointment.id} onClick={() => void updateAppointment(appointment, "rejected")}>Refuser</button></div>}</li>;
+                    })}</ul> : <p className="empty-copy">Aucun créneau réservé pour le moment.</p>}
+                  </div>
                   <form className="availability-form" onSubmit={(event) => void addAvailability(event)}>
                     <label>Jour<select value={availabilityForm.dayOfWeek} onChange={(event) => setAvailabilityForm({ ...availabilityForm, dayOfWeek: event.target.value })}>{weekdays.map((day, index) => <option value={index} key={day}>{day}</option>)}</select></label>
                     <div className="time-fields"><label>De<input type="time" value={availabilityForm.startTime} onChange={(event) => setAvailabilityForm({ ...availabilityForm, startTime: event.target.value })} required /></label><label>À<input type="time" value={availabilityForm.endTime} onChange={(event) => setAvailabilityForm({ ...availabilityForm, endTime: event.target.value })} required /></label></div>
                     <label>Fuseau horaire<input value={availabilityForm.timeZone} onChange={(event) => setAvailabilityForm({ ...availabilityForm, timeZone: event.target.value })} required /></label>
+                    <p className="availability-hint">Les incubés pourront réserver chaque plage horaire telle quelle. La durée dépend donc de l’intervalle que tu définis.</p>
                     <button className="primary-button full-button" disabled={busy === "availability"}>＋ Ajouter un créneau</button>
                   </form>
                 </section>
@@ -493,17 +664,17 @@ function MenteeGrid({ mentees, onSelect, actionLabel = "Voir le suivi →" }: { 
 }
 
 function AppointmentFeature({ appointment, menteeName: name, busy, onAccept, onReject }: { appointment: Appointment; menteeName: string; busy: boolean; onAccept: () => void; onReject: () => void }) {
-  return <div className="feature-appointment"><div className="feature-date"><strong>{new Date(appointment.date_time).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong><span>{new Date(appointment.date_time).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</span></div><h3>{name}</h3><p>{appointment.status === "pending" ? "Demande en attente de confirmation" : "Session de mentorat planifiée"}</p>{appointment.meeting_url && <a className="meet-link" href={appointment.meeting_url} target="_blank" rel="noreferrer">↗ Rejoindre Google Meet</a>}{appointment.status === "pending" && <div className="feature-actions"><button className="accept-button" disabled={busy} onClick={onAccept}>Accepter</button><button className="reject-button" disabled={busy} onClick={onReject}>Refuser</button></div>}</div>;
+  return <div className="feature-appointment"><div className="feature-date"><strong>{new Date(appointment.date_time).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong><span>{new Date(appointment.date_time).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</span></div><h3>{name}</h3><p>{appointment.status === "pending" ? "Demande en attente de confirmation" : "Session de mentorat planifiée"}</p>{appointment.incube_message && <p className="appointment-message">Message de l’incubé : {appointment.incube_message}</p>}{appointment.status === "pending" && new Date(appointment.date_time) > new Date() && <div className="feature-actions"><button className="accept-button" disabled={busy} onClick={onAccept}>Accepter</button><button className="reject-button" disabled={busy} onClick={onReject}>Refuser</button></div>}</div>;
 }
 
-function AppointmentList({ appointments, menteeById, onSelect, onAccept, onReject, busy, detailed = false }: { appointments: Appointment[]; menteeById: Map<string, Mentee>; onSelect?: () => void; onAccept?: (appointment: Appointment) => void; onReject?: (appointment: Appointment) => void; busy?: string; detailed?: boolean }) {
+function AppointmentList({ appointments, menteeById, onSelect, onAccept, onReject, onCancel, busy, detailed = false }: { appointments: Appointment[]; menteeById: Map<string, Mentee>; onSelect?: () => void; onAccept?: (appointment: Appointment) => void; onReject?: (appointment: Appointment) => void; onCancel?: (appointment: Appointment) => void; busy?: string; detailed?: boolean }) {
   if (!appointments.length) return <p className="empty-copy">Aucun rendez-vous à afficher.</p>;
   return <ul className="appointment-list">{appointments.map((appointment) => <li key={appointment.id} className="appointment-row">
     <button className="appointment-time" onClick={onSelect} disabled={!onSelect}><strong>{new Date(appointment.date_time).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong><span>{new Date(appointment.date_time).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span></button>
-    <div className="appointment-info"><strong>{menteeName(menteeById, appointment.incube_id)}</strong><small>{appointment.status === "pending" ? "Demande à confirmer" : appointment.status === "accepted" ? "Confirmé" : appointment.status}</small></div>
-    <span className={`appointment-status ${appointment.status}`}>{appointment.status === "pending" ? "En attente" : appointment.status === "accepted" ? "Confirmé" : "Terminé"}</span>
-    {detailed && appointment.status === "pending" && <div className="appointment-actions"><button className="accept-button" disabled={busy === appointment.id} onClick={() => onAccept?.(appointment)}>Accepter</button><button className="reject-button" disabled={busy === appointment.id} onClick={() => onReject?.(appointment)}>Refuser</button></div>}
-    {appointment.meeting_url && <a className="meet-link" href={appointment.meeting_url} target="_blank" rel="noreferrer">Google Meet ↗</a>}
+    <div className="appointment-info"><strong>{menteeName(menteeById, appointment.incube_id)}</strong><small>{appointment.status === "pending" ? new Date(appointment.date_time) > new Date() ? "Demande à confirmer" : "Date passée — sans décision" : appointmentStatusLabel(appointment.status)}</small>{appointment.incube_message && <small className="appointment-message">Message : {appointment.incube_message}</small>}</div>
+    <span className={`appointment-status ${appointment.status === "pending" && new Date(appointment.date_time) <= new Date() ? "expired" : appointment.status}`}>{appointment.status === "pending" ? new Date(appointment.date_time) > new Date() ? "En attente" : "Date passée" : appointmentStatusLabel(appointment.status)}</span>
+    {detailed && appointment.status === "pending" && new Date(appointment.date_time) > new Date() && <div className="appointment-actions"><button className="accept-button" disabled={busy === appointment.id} onClick={() => onAccept?.(appointment)}>Accepter</button><button className="reject-button" disabled={busy === appointment.id} onClick={() => onReject?.(appointment)}>Refuser</button></div>}
+    {detailed && (appointment.status === "pending" || appointment.status === "accepted") && new Date(appointment.date_time) > new Date() && <div className="appointment-actions"><button className="reject-button" disabled={busy === appointment.id} onClick={() => onCancel?.(appointment)}>Annuler le rendez-vous</button></div>}
   </li>)}</ul>;
 }
 
@@ -519,6 +690,15 @@ function DeliverableList({ deliverables, busy, feedbackDrafts, setFeedbackDrafts
       </div>
     </article>;
   })}</div>;
+}
+
+function FormationList({ formations, busy, onDownload }: { formations: Formation[]; busy: string; onDownload: (formation: Formation) => void }) {
+  const labels = { book: "Livre", video: "Vidéo", document: "Document" };
+  return <div className="formation-list">{formations.map((formation) => <article className="formation-row" key={formation.id}>
+    <span className="formation-type">{labels[formation.resource_type] || "Document"}</span>
+    <div className="formation-info"><strong>{formation.title}</strong>{formation.description && <p>{formation.description}</p>}<small>Ajoutée le {formatDate(formation.created_at)}</small></div>
+    <button className="secondary-button small-button" disabled={busy === formation.id} onClick={() => void onDownload(formation)}>↓ Ouvrir</button>
+  </article>)}</div>;
 }
 
 function ResourceList({ deliverables, busy, onDownload }: { deliverables: DeliverableWithContext[]; busy: string; onDownload: (deliverable: DeliverableWithContext) => void }) {
@@ -542,6 +722,16 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "PF";
 }
 
+function appointmentStatusLabel(status: string) {
+  const normalizedStatus = status.toLowerCase();
+  if (["accepted", "accepte", "accepté"].includes(normalizedStatus)) return "Confirmé";
+  if (["cancelled", "canceled", "annule", "annulé", "annulee", "annulée"].includes(normalizedStatus)) return "Annulé";
+  if (["rejected", "refused", "refuse", "refusé", "refusee", "refusée", "declined"].includes(normalizedStatus)) return "Refusé";
+  if (["completed", "termine", "terminé"].includes(normalizedStatus)) return "Terminé";
+  if (["pending", "en_attente"].includes(normalizedStatus)) return "En attente";
+  return status;
+}
+
 function menteeName(mentees: Map<string, Mentee>, id: string) {
   const mentee = mentees.get(id);
   return fullName(mentee?.first_name, mentee?.last_name) || "Incubé";
@@ -553,6 +743,32 @@ function formatDate(value: string) {
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatInTimeZone(value: string, timeZone: string) {
+  return new Date(value).toLocaleString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  });
+}
+
+function matchesAvailability(dateTime: string, availability: Availability) {
+  const parts = new Map(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: availability.time_zone,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(dateTime)).map((part) => [part.type, part.value]),
+  );
+  const dayOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.get("weekday") || "");
+  const startTime = `${parts.get("hour")}:${parts.get("minute")}`;
+  return dayOfWeek === availability.day_of_week && startTime === availability.start_time.slice(0, 5);
 }
 
 function errorMessage(error: unknown) {

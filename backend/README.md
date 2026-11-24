@@ -9,7 +9,18 @@ l’utilisateur connecté et la clé publique `anon` ; elle ne nécessite pas de
 1. Copier `.env.example` vers `.env` et renseigner `SUPABASE_URL` et
    `SUPABASE_ANON_KEY` avec les valeurs du projet Supabase. Configurer
    `FRONTEND_ORIGIN` avec l’origine du frontend.
-2. Appliquer `supabase/migrations/20261026225300_mentor_backend.sql` au projet
+2. Appliquer dans l’ordre les migrations
+   `supabase/migrations/20261026225300_mentor_backend.sql`,
+   `supabase/migrations/20261118143100_remaining_mvp_roles.sql`,
+   `supabase/migrations/20261118152500_mentor_formations.sql`,
+   `supabase/migrations/20261118222800_audit_trail.sql`,
+   `supabase/migrations/20261121180000_appointment_slots.sql`,
+   `supabase/migrations/20261121180900_incube_appointment_proposals.sql`,
+   `supabase/migrations/20261121184000_future_appointment_decisions.sql` et
+   `supabase/migrations/20261121190000_mentor_approval_for_incube_bookings.sql`,
+   `supabase/migrations/20261121192000_reopen_future_rejected_appointments.sql`,
+   `supabase/migrations/20261121193000_disable_google_meet.sql` et
+   `supabase/migrations/20261121203000_normalize_appointment_statuses.sql` au projet
    Supabase, après avoir créé les tables de base décrites dans le modèle
    PathForge (`profiles`, `projects`, `progressions`, `formations`,
    `deliverables`, `appointments`, `messages`).
@@ -44,6 +55,7 @@ aux opérations prévues pour le mentor ou l’incubé.
 | `GET`, `POST`, `DELETE` | `/api/mentor/availability[/:availabilityId]` | Gérer les créneaux récurrents (jour 0 = dimanche, fuseau IANA) |
 | `GET` | `/api/mentor/appointments` | Consulter les demandes et rendez-vous |
 | `PATCH` | `/api/mentor/appointments/:appointmentId` | Accepter (`{"status":"accepted"}`) ou refuser (`{"status":"rejected"}`) |
+| `DELETE` | `/api/mentor/appointments/:appointmentId` | Annuler un rendez-vous à venir et libérer le créneau |
 | `GET` | `/api/mentor/messages/:incubeId` | Lire la conversation avec un incubé assigné |
 | `POST` | `/api/mentor/messages` | Envoyer `{ "incubeId": "...", "content": "..." }` |
 | `PUT` | `/api/mentor/messages/:messageId/read` | Marquer un message reçu comme lu |
@@ -53,14 +65,6 @@ Les messages sont enregistrés dans Supabase afin que le frontend puisse les
 recevoir en temps réel via Supabase Realtime. Vérifier que la table `messages`
 est incluse dans la publication Realtime du projet.
 
-La création d’un Google Meet lors de l’acceptation est activée si
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` et `GOOGLE_REFRESH_TOKEN` sont
-configurées (`GOOGLE_CALENDAR_ID` vaut alors `primary` par défaut). Sans configuration, le rendez-vous est
-accepté et la réponse indique `meetingLinkStatus: "not_configured"`. Une
-configuration partielle ou une erreur Google est signalée et ne valide pas
-l’acceptation. Le jeton OAuth doit disposer du scope Google Calendar
-`https://www.googleapis.com/auth/calendar.events`.
-
 ## Modèle de données utilisé
 
 Les noms de tables et colonnes des tables déjà modélisées suivent le schéma
@@ -69,8 +73,17 @@ PathForge : `profiles.id/role/status`, `projects.incube_id/mentor_id`,
 `deliverables.project_id/file_url/feedback_mentor`,
 `appointments.mentor_id/incube_id/date_time/status` et
 `messages.sender_id/receiver_id/content`. La migration ajoute les colonnes
-nécessaires aux alertes, aux lectures de messages et au lien Meet, ainsi que
+nécessaires aux rendez-vous, aux alertes et aux lectures de messages, ainsi que
 les tables de disponibilités et de notifications.
+
+Un incubé peut réserver un créneau disponible ou proposer une autre date avec
+un message de 500 caractères maximum. Les propositions restent en attente
+jusqu’à la décision du mentor.
+
+Les créneaux récurrents définis par le mentor sont proposés pendant les 30 prochains
+jours ; l’intervalle choisi par le mentor détermine la durée. Une réservation
+par un incubé reste en attente de la décision du mentor et bloque le créneau.
+Une réservation ou une annulation est vérifiée côté base afin d’éviter les doubles réservations.
 
 ## Tests
 

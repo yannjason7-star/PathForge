@@ -1,6 +1,4 @@
-const { randomUUID } = require('node:crypto');
 const express = require('express');
-const { google } = require('googleapis');
 const { z } = require('zod');
 const { authenticateMentor, httpError } = require('../middleware/authenticate-mentor');
 
@@ -200,7 +198,7 @@ mentorRouter.delete('/availability/:availabilityId', asyncHandler(async (request
 
 mentorRouter.get('/appointments', asyncHandler(async (request, response) => {
   const { data, error } = await request.supabase.from('appointments')
-    .select('id, incube_id, date_time, status, meeting_url')
+    .select('id, incube_id, date_time, status, incube_message')
     .eq('mentor_id', request.mentor.id)
     .order('date_time', { ascending: true });
   throwIfError(error);
@@ -212,26 +210,21 @@ mentorRouter.patch('/appointments/:appointmentId', asyncHandler(async (request, 
   const parsed = appointmentStatusSchema.safeParse(request.body);
   if (!parsed.success) throw httpError(400, validationMessage(parsed.error));
 
-  let meetingUrl = null;
-  let meetingLinkStatus = 'not_requested';
-  if (parsed.data.status === 'accepted') {
-    const appointment = await getPendingAppointment(
-      request.supabase,
-      request.mentor.id,
-      appointmentId,
-    );
-    const meeting = await createGoogleMeetLink(appointment);
-    meetingUrl = meeting.url;
-    meetingLinkStatus = meeting.status;
-  }
-
   const { data, error } = await request.supabase.rpc('update_mentor_appointment', {
     p_appointment_id: appointmentId,
     p_status: parsed.data.status,
-    p_meeting_url: meetingUrl,
   });
   throwIfError(error);
-  response.json({ rendezVous: data, meetingLinkStatus });
+  response.json({ rendezVous: data });
+}));
+
+mentorRouter.delete('/appointments/:appointmentId', asyncHandler(async (request, response) => {
+  const appointmentId = parseUuid(request.params.appointmentId);
+  const { data, error } = await request.supabase.rpc('cancel_appointment', {
+    p_appointment_id: appointmentId,
+  });
+  throwIfError(error);
+  response.json({ rendezVous: data });
 }));
 
 mentorRouter.get('/messages/:incubeId', asyncHandler(async (request, response) => {
@@ -383,59 +376,6 @@ async function assertAssignedIncube(supabase, mentorId, incubeId) {
     .maybeSingle();
   throwIfError(error);
   if (!data) throw httpError(404, 'Incubé non assigné à ce mentor.');
-}
-
-async function getPendingAppointment(supabase, mentorId, appointmentId) {
-  const { data, error } = await supabase.from('appointments')
-    .select('id, incube_id, date_time, status')
-    .eq('id', appointmentId)
-    .eq('mentor_id', mentorId)
-    .eq('status', 'pending')
-    .maybeSingle();
-  throwIfError(error);
-  if (!data) throw httpError(404, 'Demande de rendez-vous en attente introuvable.');
-  return data;
-}
-
-async function createGoogleMeetLink(appointment) {
-  const required = [
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'GOOGLE_REFRESH_TOKEN',
-  ];
-  const configured = required.filter((name) => Boolean(process.env[name]));
-  if (configured.length === 0) return { url: null, status: 'not_configured' };
-  if (configured.length !== required.length) {
-    throw new Error('La configuration Google Calendar est incomplète.');
-  }
-
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-  );
-  auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
-  const calendar = google.calendar({ version: 'v3', auth });
-  const start = new Date(appointment.date_time);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-  const { data } = await calendar.events.insert({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    conferenceDataVersion: 1,
-    requestBody: {
-      summary: 'Rendez-vous de mentorat PathForge',
-      start: { dateTime: start.toISOString() },
-      end: { dateTime: end.toISOString() },
-      conferenceData: {
-        createRequest: {
-          requestId: randomUUID(),
-          conferenceSolutionKey: { type: 'hangoutsMeet' },
-        },
-      },
-    },
-  });
-  const url = data.hangoutLink
-    || data.conferenceData?.entryPoints?.find((entry) => entry.entryPointType === 'video')?.uri;
-  if (!url) throw new Error('Google Calendar n’a pas renvoyé de lien Google Meet.');
-  return { url, status: 'created' };
 }
 
 function currentWeekRange(date) {

@@ -41,11 +41,22 @@ n’est enregistré dans le code.
   livrables et notifications.
 - **Mes incubés** : projets attribués et progression des formations.
 - **Évaluations** : téléchargement signé des livrables et envoi de feedback.
-- **Agenda & visios** : demandes de rendez-vous, décisions, liens Meet et
-  gestion des disponibilités récurrentes.
-- **Ressources** : bibliothèque des documents déposés par les incubés.
+- **Agenda & rendez-vous** : demandes de rendez-vous et décisions,
+  gestion des disponibilités récurrentes. Les incubés assignés peuvent réserver
+  les créneaux proposés sur les 30 prochains jours ; leur réservation attend la
+  validation du mentor et le créneau n’est plus sélectionnable entre-temps. Le
+  mentor comme l’incubé peuvent annuler un rendez-vous,
+  ce qui libère le créneau. Un incubé peut aussi proposer une autre date avec un
+  message à son mentor, qui accepte ou refuse la proposition depuis l’agenda.
+- **Ressources** : bibliothèque des livres, vidéos et documents pédagogiques
+  déposés par le mentor, ainsi que des documents reçus des incubés. Les fichiers
+  sont privés et ouverts via une URL temporaire pour les utilisateurs autorisés.
 - **Messages** : conversations et envoi de messages aux incubés assignés.
 - **Notifications** : lecture des alertes.
+
+Le cockpit se met à jour en temps réel pour les nouveaux messages et
+notifications lorsque la publication Supabase Realtime est active pour les
+tables `messages` et `notifications`.
 
 Les volumes mensuels de coaching, notes moyennes et tâches personnelles visibles
 sur la maquette ne sont pas encore exposés par le modèle/API Mentor ; ils ne sont

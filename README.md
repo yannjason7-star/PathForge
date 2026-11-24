@@ -73,8 +73,8 @@ npm run dev
 
 Ouvre ensuite [http://localhost:3000](http://localhost:3000) et connecte-toi
 avec un compte Mentor actif. L’API vérifie la session Supabase et le rôle du
-compte. Google Calendar est facultatif ; sans configuration OAuth, l’acceptation
-d’un rendez-vous fonctionne sans création automatique d’un lien Meet.
+compte. Les rendez-vous et les créneaux se gèrent depuis les espaces Mentor et
+Incubé.
 
 Pour arrêter chaque serveur, utilise `Ctrl+C` dans son terminal.
 
