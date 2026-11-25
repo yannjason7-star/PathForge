@@ -1,0 +1,380 @@
+/*
+  entreprise.css — Compléments de style pour l'espace Entreprise.
+  S'appuie sur mentor.css (importé avant) pour la sidebar, les cartes, les boutons, les bannières…
+  Ce fichier ne contient que ce qui est propre au compte Entreprise.
+*/
+
+/* ===== Dashboard : grille de statistiques à 3 colonnes (au lieu de 4 côté Mentor) ===== */
+.stat-grid.stat-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr))
+}
+
+.center-action {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 12px
+}
+
+/* ===== Carte projet (écran 1) ===== */
+.project-stack {
+  display: grid;
+  gap: 15px
+}
+
+/* espace entre plusieurs projets */
+.project-card {
+  padding: 20px
+}
+
+.project-card .panel-heading h2 {
+  font-size: 18px;
+  letter-spacing: -.04em
+}
+
+.project-card .status-chip {
+  padding: 7px 11px;
+  font-size: 10px
+}
+
+/* pastille « En phase de… » */
+.project-card .progress-label {
+  font-size: 10px
+}
+
+.project-card .progress-track {
+  height: 7px
+}
+
+/* Frise des 5 étapes : cadrage → livraison */
+.phase-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none
+}
+
+.phase-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: #9aa5b2;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center
+}
+
+.phase-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef2f6;
+  color: #8793a1;
+  font-size: 11px;
+  font-weight: 800
+}
+
+/* Étape terminée : pastille verte pleine avec ✓ */
+.phase-steps li.done {
+  color: #087f71
+}
+
+.phase-steps li.done .phase-dot {
+  background: #087f71;
+  color: #fff
+}
+
+/* Étape en cours : pastille blanche entourée d'un halo */
+.phase-steps li.current {
+  color: #172538
+}
+
+.phase-steps li.current .phase-dot {
+  background: #fff;
+  color: #087f71;
+  box-shadow: 0 0 0 2px #087f71, 0 0 0 6px #d8f6ee
+}
+
+/* ===== Formulaire de demande de devis (écran 2) ===== */
+.request-panel {
+  max-width: 760px;
+  padding: 24px
+}
+
+.request-form {
+  display: grid;
+  gap: 18px
+}
+
+.request-form label,
+.type-fieldset legend {
+  display: grid;
+  gap: 6px;
+  color: #4c5b6c;
+  font-size: 11px;
+  font-weight: 700
+}
+
+/* Champs texte, zone de texte et liste déroulante */
+.request-form input[type="text"],
+.request-form input:not([type]),
+.request-form textarea,
+.request-form select {
+  width: 100%;
+  border: 1px solid #e1e7ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #27374b;
+  font: inherit;
+  font-size: 12px;
+  outline: none
+}
+
+.request-form input:not([type]),
+.request-form select {
+  min-height: 40px;
+  padding: 0 11px
+}
+
+.request-form textarea {
+  padding: 11px;
+  line-height: 1.55;
+  resize: vertical
+}
+
+/* Contour vert au focus (cohérent avec le dashboard Mentor) */
+.request-form input:focus,
+.request-form textarea:focus,
+.request-form select:focus {
+  border-color: #0c8d7f;
+  box-shadow: 0 0 0 3px #0c8d7f14
+}
+
+/* Choix du type de solution (Web / Mobile) sous forme de 2 cartes cliquables */
+.type-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0
+}
+
+.type-fieldset legend {
+  margin-bottom: 8px;
+  padding: 0
+}
+
+.type-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px
+}
+
+.type-option {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e1e7ed;
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, background .15s
+}
+
+.type-option:hover {
+  background: #f8fafc
+}
+
+.type-option.selected {
+  border-color: #087f71;
+  background: #effaf6;
+  box-shadow: 0 0 0 3px #087f7112
+}
+
+/* Le radio natif est masqué visuellement mais reste accessible au clavier */
+.type-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none
+}
+
+.type-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1f5f8;
+  font-size: 19px
+}
+
+.type-option strong,
+.type-option small {
+  display: block
+}
+
+.type-option strong {
+  color: #1d2c3f;
+  font-size: 12px
+}
+
+.type-option small {
+  margin-top: 3px;
+  color: #8793a1;
+  font-size: 10px;
+  font-weight: 500
+}
+
+.request-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px
+}
+
+/* ===== Tableau Devis / Factures (écran 3) ===== */
+.table-wrap {
+  overflow-x: auto
+}
+
+/* défilement horizontal si l'écran est étroit */
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px
+}
+
+.billing-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7edf3;
+  color: #8a95a2;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap
+}
+
+.billing-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eff2f5;
+  color: #445467;
+  vertical-align: middle
+}
+
+.billing-table tr:last-child td {
+  border-bottom: 0
+}
+
+.billing-table td strong {
+  color: #1d2c3f
+}
+
+/* Pastilles de statut : le point (<i>) prend la couleur du texte via currentColor */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap
+}
+
+.status-badge i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor
+}
+
+.status-badge.pending {
+  background: #fff5e3;
+  color: #a77b20
+}
+
+/* En attente : orange */
+.status-badge.to_sign {
+  background: #fff0ee;
+  color: #c05249
+}
+
+/* Devis à signer : rouge */
+.status-badge.paid {
+  background: #e4f7f1;
+  color: #07816f
+}
+
+/* Payé : vert */
+
+/* ===== Mobile (≤ 720px) ===== */
+@media(max-width:720px) {
+  .stat-grid.stat-grid-3 {
+    grid-template-columns: 1fr
+  }
+
+  .phase-steps {
+    grid-template-columns: repeat(5, minmax(52px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 4px
+  }
+
+  .type-options {
+    grid-template-columns: 1fr
+  }
+
+  .request-panel {
+    padding: 16px
+  }
+
+  .request-actions {
+    flex-direction: column-reverse
+  }
+
+  .request-actions button {
+    width: 100%
+  }
+
+  /* Le tableau devient une liste de cartes : chaque cellule affiche son libellé (attribut data-label) */
+  .billing-table thead {
+    display: none
+  }
+
+  .billing-table,
+  .billing-table tbody,
+  .billing-table tr,
+  .billing-table td {
+    display: block;
+    width: 100%
+  }
+
+  .billing-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid #eff2f5
+  }
+
+  .billing-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border: 0
+  }
+
+  .billing-table td[data-label]::before {
+    content: attr(data-label);
+    color: #8a95a2;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase
+  }
+}
